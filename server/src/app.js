@@ -15,7 +15,13 @@ const mealplanRoutes = require('./routes/mealplan.routes');
 const feedbackRoutes = require('./routes/feedback.routes');
 const app = express();
 
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://hostel-management-personal.vercel.app'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 app.use('/api/resources', resourcesRoutes);
