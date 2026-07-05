@@ -1,3 +1,4 @@
+import api from '../services/api';
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -10,34 +11,35 @@ export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        login(data.user, data.token);
-        // Redirect based on role
-      if (data.user.role === 'STUDENT') {
-          navigate('/student-portal');
-        } else {
-          navigate('/dashboard');
-        }
-      } else {
-        setError(data.message || 'Invalid credentials');
-      }
-    } catch {
-      setError('Server error. Make sure backend is running.');
-    } finally {
-      setLoading(false);
+ const handleLogin = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
+
+  try {
+    const res = await api.post('/auth/login', {
+      email,
+      password,
+    });
+
+    const data = res.data;
+
+    login(data.user, data.token);
+
+    if (data.user.role === 'STUDENT') {
+      navigate('/student-portal');
+    } else {
+      navigate('/dashboard');
     }
-  };
+  } catch (err) {
+    setError(
+      err.response?.data?.message ||
+      'Server error. Please try again.'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f5f3ef' }}>
