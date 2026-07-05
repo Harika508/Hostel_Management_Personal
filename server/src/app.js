@@ -16,10 +16,22 @@ const feedbackRoutes = require('./routes/feedback.routes');
 const app = express();
 
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://hostel-management-personal.vercel.app'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (Postman, mobile apps, etc.)
+    if (!origin) return callback(null, true);
+
+    // Allow localhost
+    if (origin === 'http://localhost:5173') {
+      return callback(null, true);
+    }
+
+    // Allow all Vercel deployments
+    if (origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json());
