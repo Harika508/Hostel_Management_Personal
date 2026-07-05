@@ -1,0 +1,337 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id           Int      @id @default(autoincrement())
+  name         String
+  address      String?
+  city         String?
+  hostelCode   String   @unique
+  adminEmail   String
+  gstin        String?
+  pan          String?
+  bankName     String?
+  bankAccount  String?
+  bankIfsc     String?
+  bankBranch   String?
+  reminderDaysBefore Int @default(3)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users               User[]
+  rooms               Room[]
+  staff               Staff[]
+  featureFlags        FeatureFlag[]
+  students            Student[]
+  inventoryItems      InventoryItem[]
+  facilities          Facility[]
+  maintenanceRequests MaintenanceRequest[]
+}
+
+model User {
+  id             Int       @id @default(autoincrement())
+  organizationId Int
+  name           String
+  email          String    @unique
+  passwordHash   String
+  role           Role      @default(STUDENT)
+  loginApproved  Boolean   @default(false)
+  inviteToken    String?   @unique
+  inviteExpiry   DateTime?
+  accessToken    String?   @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  student      Student?
+  staff        Staff?
+}
+
+model Room {
+  id             Int        @id @default(autoincrement())
+  organizationId Int
+  roomNumber     String
+  name           String
+  floor          Int
+  totalBeds      Int
+  status         RoomStatus @default(VACANT)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  beds         Bed[]
+}
+
+model Bed {
+  id       Int       @id @default(autoincrement())
+  roomId   Int
+  bedLabel String
+  status   BedStatus @default(VACANT)
+
+  room    Room     @relation(fields: [roomId], references: [id])
+  student Student?
+}
+
+model Student {
+  id             Int       @id @default(autoincrement())
+  organizationId Int
+  userId         Int?      @unique
+  bedId          Int?      @unique
+  name           String
+  email          String
+  phone          String?
+  guardianName   String?
+  guardianPhone  String?
+  checkInDate    DateTime?
+  checkOutDate   DateTime?
+  kycStatus      KycStatus @default(PENDING)
+  kycDocumentUrl String?
+  idType         String?
+  mealBreakfast  Boolean   @default(false)
+  mealLunch      Boolean   @default(false)
+  mealDinner     Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User?        @relation(fields: [userId], references: [id])
+  bed          Bed?         @relation(fields: [bedId], references: [id])
+  payments     Payment[]
+  accessLogs   AccessLog[]
+  mealPlans    MealPlan[]
+  feedbacks    Feedback[]
+}
+
+model Payment {
+  id                Int           @id @default(autoincrement())
+  studentId         Int
+  amount            Float
+  paidAmount        Float         @default(0)
+  dueDate           DateTime
+  paidDate          DateTime?
+  status            PaymentStatus @default(UNPAID)
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  gstAmount         Float?
+  tdsAmount         Float?
+  txnRef            String?
+  receiptNo         String?
+  createdAt         DateTime      @default(now())
+
+  student Student @relation(fields: [studentId], references: [id])
+  lastReminderSent DateTime?
+}
+
+model Staff {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  userId         Int?         @unique
+  name           String
+  email          String?
+  role           String
+  phone          String?
+  monthlySalary  Float
+  salaryStatus   SalaryStatus @default(UNPAID)
+  salaryPaidDate DateTime?
+  upiId          String?
+  upiPhone       String?
+  paymentMethod  String?
+  txnRef         String?
+  basicSalary    Float?
+  hra            Float?
+  da             Float?
+  pf             Float?
+  tdsDeduction   Float?
+  permissions    String?
+  createdAt      DateTime     @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User?        @relation(fields: [userId], references: [id])
+}
+
+model AccessLog {
+  id         Int        @id @default(autoincrement())
+  studentId  Int
+  nfcCardId  String
+  accessTime DateTime   @default(now())
+  accessType AccessType @default(ENTRY)
+  status     String     @default("ACTIVE")
+
+  student Student @relation(fields: [studentId], references: [id])
+}
+
+model MealPlan {
+  id        Int       @id @default(autoincrement())
+  studentId Int
+  day       DayOfWeek
+  breakfast Boolean   @default(false)
+  lunch     Boolean   @default(false)
+  dinner    Boolean   @default(false)
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, day])
+}
+
+model Feedback {
+  id         Int              @id @default(autoincrement())
+  studentId  Int
+  category   FeedbackCategory @default(GENERAL)
+  rating     Int              @default(5)
+  message    String
+  status     FeedbackStatus   @default(UNREAD)
+  createdAt  DateTime         @default(now())
+
+  student Student @relation(fields: [studentId], references: [id])
+}
+
+model FeatureFlag {
+  id             Int     @id @default(autoincrement())
+  organizationId Int
+  flagName       String
+  isEnabled      Boolean @default(true)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+model InventoryItem {
+  id             Int           @id @default(autoincrement())
+  organizationId Int
+  name           String
+  category       String
+  quantity       Int           @default(1)
+  condition      ItemCondition @default(GOOD)
+  roomId         Int?
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+model Facility {
+  id             Int            @id @default(autoincrement())
+  organizationId Int
+  name           String
+  type           String
+  status         FacilityStatus @default(AVAILABLE)
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+model MaintenanceRequest {
+  id             Int             @id @default(autoincrement())
+  organizationId Int
+  title          String
+  description    String
+  category       String
+  priority       RequestPriority @default(MEDIUM)
+  status         RequestStatus   @default(PENDING)
+  reportedById   Int
+  reportedByRole String
+  reportedByName String
+  roomNumber     String?
+  assignedToId   Int?
+  resolvedById   Int?
+  resolvedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  STAFF
+  STUDENT
+}
+
+enum RoomStatus {
+  VACANT
+  OCCUPIED
+  LEAVING_SOON
+}
+
+enum BedStatus {
+  VACANT
+  OCCUPIED
+  LEAVING_SOON
+}
+
+enum KycStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+enum SalaryStatus {
+  PAID
+  UNPAID
+}
+
+enum AccessType {
+  ENTRY
+  EXIT
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum FeedbackCategory {
+  FOOD
+  ROOM
+  STAFF
+  GENERAL
+}
+
+enum FeedbackStatus {
+  UNREAD
+  READ
+  RESOLVED
+}
+
+enum ItemCondition {
+  GOOD
+  DAMAGED
+  UNDER_REPAIR
+  OUT_OF_STOCK
+}
+
+enum FacilityStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+}
+
+enum RequestPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RequestStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+}
