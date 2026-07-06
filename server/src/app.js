@@ -74,5 +74,27 @@ app.listen(PORT, () => {
     console.error('Scheduler failed to start:', err.message);
   }
 });
+const { sendPaymentReminder } = require('./utils/mailer');
 
+app.get('/test-reminder', async (req, res) => {
+  try {
+    await sendPaymentReminder({
+      to: process.env.MAIL_USER,
+      studentName: "Harika",
+      amount: 100,
+      dueDate: new Date(),
+      type: "reminder",
+      daysBefore: 2,
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      code: err.code,
+    });
+  }
+});
 module.exports = app;
