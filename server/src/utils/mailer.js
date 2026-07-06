@@ -7,7 +7,13 @@ const transporter = nodemailer.createTransport({
     pass: process.env.MAIL_PASS,
   },
 });
-
+transporter.verify(function (error, success) {
+  if (error) {
+    console.log("SMTP ERROR:", error);
+  } else {
+    console.log("SMTP SERVER IS READY");
+  }
+});
 const sendPaymentReminder = async ({ to, studentName, amount, dueDate, type, daysBefore }) => {
   const isOverdue = type === 'overdue';
 
